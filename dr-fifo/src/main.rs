@@ -1,18 +1,27 @@
 // main.rs
 
 mod packet;
+mod fifo;
 
 use packet::{Packet, PacketGenerator};
+use fifo::FifoScheduler;
 use std::{thread, time};
 
 fn main() {
     let mut packet_generator = PacketGenerator::new(4, 4, 5.0);
+    let mut fifo_scheduler = FifoScheduler::new();
     let mut time_elapsed = 0;
 
     loop {
-        let packets = packet_generator.generate_packets(time_elapsed);
+        let packets: Vec<Packet> = packet_generator.generate_packets(time_elapsed);
 
-        // Process packets or integrate with your scheduler here
+        // Enqueue packets into the scheduler
+        for packet in packets {
+            fifo_scheduler.enqueue(packet);
+        }
+
+        // Serve packets from the scheduler
+        fifo_scheduler.serve_packets();
 
         // Simulate processing time
         simulate_processing_time();
@@ -23,5 +32,6 @@ fn main() {
 
 fn simulate_processing_time() {
     // Simulate processing time by sleeping for 1 second
+    println!("Processing...");
     thread::sleep(time::Duration::from_secs(1));
 }
