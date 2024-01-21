@@ -13,16 +13,18 @@ fn main() {
     let mut time_elapsed = 0;
 
     loop {
+        
+
         let packets: Vec<Packet> = packet_generator.generate_packets(time_elapsed);
+        println!("Enqueued: ");
 
         // Enqueue packets into the scheduler
         for packet in packets {
+            println!("ID {}: from {} to {}",packet.id,packet.incoming_source,packet.outgoing_source);
             fifo_scheduler.enqueue(packet);
         }
-
         // Serve packets from the scheduler
         fifo_scheduler.serve_packets();
-
         // Simulate processing time
         simulate_processing_time();
 
