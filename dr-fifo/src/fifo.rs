@@ -1,27 +1,27 @@
 // scheduler.rs
 
 use crate::packet::Packet;
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
 // FIFO Scheduler structure
 pub struct FifoScheduler {
-    input_queues: HashMap<u32, VecDeque<Packet>>, // Map input port to its queue
-    output_ports: Vec<Option<Packet>>, // The output ports, each can hold at most 1 packet
+    input_queues: Vec<VecDeque<Packet>>, // List of input queues
+    output_ports: Vec<Option<Packet>>,    // The output ports, each can hold at most 1 packet
     served_packets_count: usize,
     last_serve_time: Instant,
 }
 
 impl FifoScheduler {
     pub fn new() -> Self {
-        let mut input_queues = HashMap::new();
+        let mut input_queues = Vec::new();
+        for _ in 0..4 {
+            input_queues.push(VecDeque::new());
+        }
+
         let mut output_ports = Vec::with_capacity(4);
         for _ in 0..4 {
             output_ports.push(None);
-        }
-
-        for i in 0..4 {
-            input_queues.insert(i, VecDeque::new());
         }
 
         Self {
@@ -34,10 +34,7 @@ impl FifoScheduler {
 
     pub fn enqueue(&mut self, packet: Packet) {
         let input_port = packet.incoming_source;
-        self.input_queues
-            .entry(input_port)
-            .or_insert(VecDeque::new())
-            .push_back(packet.clone());
+        self.input_queues[input_port as usize].push_back(packet.clone());
         println!(
             "Enqueued: Packet ID {:?} at Input Port {}",
             packet.id, input_port
@@ -76,13 +73,11 @@ impl FifoScheduler {
 
     fn get_next_packet(&mut self, output_port: usize) -> Option<Packet> {
         // Try to get the next packet from the first non-empty input queue
-        for input_queue in self.input_queues.values_mut() {
-            if let Some(packet) = input_queue.pop_front() {
-                return Some(packet);
-            }
+        if let Some(packet) = self.input_queues[output_port].pop_front() {
+            return Some(packet);
         }
 
-        // If no packets are available in any input queue, try to get from the output port
+        // If no packets are available in the input queue, try to get from the output port
         if let Some(packet) = self.output_ports[output_port].take() {
             return Some(packet);
         }
@@ -91,8 +86,8 @@ impl FifoScheduler {
     }
 
     fn print_queues(&self) {
-        for (input_port, input_queue) in &self.input_queues {
-            print!("{}st Queue: ", input_port + 1);
+        for (input_port, input_queue) in self.input_queues.iter().enumerate() {
+            print!("Queue {}: ", input_port + 1);
             for packet in input_queue {
                 print!("{},", packet.id);
             }
